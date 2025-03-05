@@ -46,10 +46,10 @@ async function handleBadWord(message) {
     userWarnings.set(user.id, warnings + 1);
 
     if (warnings === 1) {
-        // ⏳ Timeout for 10 minutes
         try {
-            await member.timeout(5 * 60 * 1000, "Menggunakan kata kasar");
-            console.log(`⏳ ${user.tag} diberi timeout 5 menit.`);
+            const member = await message.guild.members.fetch(user.id);
+            await member.timeout(3 * 60 * 1000, "Menggunakan kata kasar");
+            console.log(`⏳ ${user.tag} diberi timeout 3 menit.`);
         } catch (err) {
             console.log(`❌ Gagal timeout ${user.tag}:`, err);
         }
