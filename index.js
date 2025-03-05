@@ -34,6 +34,7 @@ const processedMessages = new Set();
 
 // ✅ Function: Warn, Timeout, or Ban User
 async function handleBadWord(message) {
+    if (!badWordRegex.test(message.content)) return;
     if (processedMessages.has(message.id)) return; // Ignore if already processed
     processedMessages.add(message.id);
 
@@ -127,29 +128,28 @@ async function tanyaAI(message, question) {
 // ✅ Optimized Message Handler (Prevents Duplicate Messages)
 client.on("messageCreate", async (message) => {
     if (message.author.bot) return; // Ignore bot messages
-    if (processedMessages.has(message.id)) return; // Prevent duplicate processing
-    processedMessages.add(message.id);
 
-    const content = message.content.toLowerCase();
+    // 🛠 Prevent multiple responses by checking if already processed
+    if (message.partial) await message.fetch();
 
-    // 🔥 Fast Bad Word Filter
-    if (badWordRegex.test(content)) {
-        return await handleBadWord(message);
-    }
+    // 🔥 Filter Bad Words
+    await handleBadWord(message);
 
     // Command: !roast
-    if (content.startsWith("!roast")) {
-        return roastUser(message);
+    if (message.content.startsWith("!roast")) {
+        await roastUser(message);
+        return;
     }
 
     // Command: !tanya <question>
-    if (content.startsWith("!tanya")) {
-        const question = content.slice(7).trim();
-        if (!question) return message.reply("❗ Tulis pertanyaan setelah perintah `!tanya`.");
-        return tanyaAI(message, question);
+    if (message.content.startsWith("!tanya")) {
+        const question = message.content.slice(7).trim();
+        if (!question) {
+            message.reply("❗ Tulis pertanyaan setelah perintah `!tanya`.");
+            return;
+        }
+        await tanyaAI(message, question);
     }
-
-    setTimeout(() => processedMessages.delete(message.id), 5000);
 });
 
 // ✅ Ensure client.login() is called only once
