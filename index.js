@@ -73,7 +73,7 @@ async function handleBadWord(message) {
         console.log(`⏳ ${user.tag} timeout ${timeoutDuration / 60000} menit.`);
         
         if (logChannel) {
-            logChannel.send(`🚨 **Moderasi:** ${user.tag} mendapatkan timeout ${timeoutDuration / 60000} menit karena berkata kasar.`);
+            logChannel.send(`🚨 **Moderasi:** ${user} mendapatkan timeout ${timeoutDuration / 60000} menit karena berkata kasar. \n ini kalimatnya : "${message.content}"`);
         } else {
             console.log("❌ Log channel tidak ditemukan!");
         }
