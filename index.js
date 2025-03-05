@@ -1,13 +1,27 @@
 require('dotenv').config();
 import('node-fetch').then(({ default: fetch }) => global.fetch = fetch);
 const { GoogleGenerativeAI } = require("@google/generative-ai");
-const { Client, GatewayIntentBits } = require("discord.js");
+const { Client, GatewayIntentBits, PermissionsBitField } = require("discord.js");
 
 const client = new Client({
-    intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent],
+    intents: [
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.MessageContent
+    ],
 });
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
+
+// ✅ List of Bad Words (Indonesian)
+const badWords = [
+    "anjing", "bangsat", "bajingan", "kontol", "memek", "pepek", "ngentot", 
+    "goblok", "tolol", "kampret", "keparat", "bego", "sinting", "brengsek", 
+    "jancok", "pantek", "asu", "bencong", "lonte", "sundala", "kimak", "setan", "iblis"
+];
+
+// ✅ Bad Word Filter (Regex)
+const badWordRegex = new RegExp(`\\b(${badWords.join('|')})\\b`, 'gi');
 
 client.once("ready", () => {
     console.log(`🔥 ${client.user.tag} is online!`);
@@ -70,8 +84,29 @@ async function tanyaAI(message, question) {
     }
 }
 
+// ✅ Function: Check Bad Words & Delete Messages
+async function filterBadWords(message) {
+    if (message.author.bot) return; // Ignore bot messages
+    if (message.member.permissions.has(PermissionsBitField.Flags.Administrator)) return; // Admins bypass filter
+
+    if (badWordRegex.test(message.content)) {
+        await message.delete(); // Delete the message
+        await message.channel.send(`${message.author}, jangan berkata kasar! 🚫`);
+
+        // ⏳ Optional: Timeout user for 10 minutes
+        try {
+            await message.member.timeout(10 * 60 * 1000, "Menggunakan kata kasar");
+        } catch (err) {
+            console.log("❌ Gagal memberikan timeout:", err);
+        }
+    }
+}
+
 client.on("messageCreate", async (message) => {
     if (message.author.bot) return;
+
+    // 🔥 Filter Bad Words
+    await filterBadWords(message);
 
     // Command: !roast
     if (message.content.startsWith("!roast")) {
