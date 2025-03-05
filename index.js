@@ -7,7 +7,8 @@ const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.MessageContent
+        GatewayIntentBits.MessageContent,
+        GatewayIntentBits.GuildMembers
     ],
 });
 
@@ -23,9 +24,46 @@ const badWords = [
 // ✅ Bad Word Filter (Regex)
 const badWordRegex = new RegExp(`\\b(${badWords.join('|')})\\b`, 'gi');
 
+// ❗ Store User Warnings (to track repeat offenders)
+const userWarnings = new Map();
+
 client.once("ready", () => {
     console.log(`🔥 ${client.user.tag} is online!`);
 });
+
+// ✅ Function: Warn, Timeout, or Ban User
+async function handleBadWord(message) {
+    const user = message.author;
+    const member = message.guild.members.cache.get(user.id);
+
+    console.log(`🚨 Bad word detected from ${user.tag}: "${message.content}"`);
+
+    await message.delete(); // Delete the bad word message
+    await message.channel.send(`${user}, jangan berkata kasar! 🚫`);
+
+    // Track user warnings
+    const warnings = userWarnings.get(user.id) || 0;
+    userWarnings.set(user.id, warnings + 1);
+
+    if (warnings === 1) {
+        // ⏳ Timeout for 10 minutes
+        try {
+            await member.timeout(5 * 60 * 1000, "Menggunakan kata kasar");
+            console.log(`⏳ ${user.tag} diberi timeout 5 menit.`);
+        } catch (err) {
+            console.log(`❌ Gagal timeout ${user.tag}:`, err);
+        }
+    } else if (warnings >= 5) {
+        // ❌ Ban user after 3 warnings
+        try {
+            await member.ban({ reason: "Menggunakan kata kasar berulang kali" });
+            console.log(`🚨 ${user.tag} telah di-banned.`);
+            userWarnings.delete(user.id); // Reset warning count
+        } catch (err) {
+            console.log(`❌ Gagal ban ${user.tag}:`, err);
+        }
+    }
+}
 
 // 🔥 Function: Roast User
 async function roastUser(message) {
@@ -84,26 +122,15 @@ async function tanyaAI(message, question) {
     }
 }
 
-// ✅ Function: Check Bad Words & Delete Messages
+// ✅ Function: Check Bad Words
 async function filterBadWords(message) {
-    if (message.author.bot) return; // Ignore bot messages
-    if (message.member.permissions.has(PermissionsBitField.Flags.Administrator)) return; // Admins bypass filter
-
     if (badWordRegex.test(message.content)) {
-        await message.delete(); // Delete the message
-        await message.channel.send(`${message.author}, jangan berkata kasar! 🚫`);
-
-        // ⏳ Optional: Timeout user for 10 minutes
-        try {
-            await message.member.timeout(10 * 60 * 1000, "Menggunakan kata kasar");
-        } catch (err) {
-            console.log("❌ Gagal memberikan timeout:", err);
-        }
+        await handleBadWord(message);
     }
 }
 
 client.on("messageCreate", async (message) => {
-    if (message.author.bot) return;
+    if (message.author.bot) return; // Remove this line to allow bot punishment
 
     // 🔥 Filter Bad Words
     await filterBadWords(message);
