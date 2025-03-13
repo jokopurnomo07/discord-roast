@@ -98,7 +98,7 @@ async function roastUser(message) {
         const response = await model.generateContent(prompt);
         const roast = response.response.text();
 
-        message.reply(`🔥 **Roasting untuk ${mentionedUser.username}:** ${roast}`);
+        message.reply(`🔥 ${roast}`);
     } catch (error) {
         console.error(error);
         message.reply("❌ Gagal nge-roast! Coba lagi nanti.");
